@@ -37,11 +37,22 @@ files.forEach(file => {
         return `${p1}return new ShadowDomRenderer(${newArgs});`;
     });
 
+    // Patch the ShadowDomRenderer class
+    src = src.replace(/(class ShadowDomRenderer extends DefaultDomRenderer2\s*\{)/, '$1\n    hostEl; shadowRoot;');
+
+    // Patch the constructor
+    src = src.replace(/(constructor\()([^)]*)(\))/, (match, p1, args, p3) => {
+        const newArgs = args.split(',').filter(arg => !/sharedStylesHost/.test(arg)).join(',');
+        return `${p1}${newArgs}${p3}`;
+    });
+
     src = src.replace(/(class ShadowDomRenderer extends DefaultDomRenderer2\s*\{[\s\S]*?\n\})/m, (match) => {
         return match
             .replace(/this\.sharedStylesHost = sharedStylesHost;/g, '// this.sharedStylesHost = sharedStylesHost;')
             .replace(/this\.sharedStylesHost\.addHost\(this\.shadowRoot\);/g, '// this.sharedStylesHost.addHost(this.shadowRoot);')
-            .replace(/this\.sharedStylesHost\.removeHost\(this\.shadowRoot\);/g, '// this.sharedStylesHost.removeHost(this.shadowRoot);');
+            .replace(/this\.sharedStylesHost\.removeHost\(this\.shadowRoot\);/g, '// this.sharedStylesHost.removeHost(this.shadowRoot);')
+            // Remove sharedStylesHost from class properties
+            .replace(/sharedStylesHost;/g, '');
     });
 
     fs.writeFileSync(file, src, 'utf8');
