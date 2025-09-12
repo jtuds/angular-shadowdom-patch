@@ -28,23 +28,8 @@ console.log('Found files:', files);
 files.forEach(file => {
     let src = fs.readFileSync(file, 'utf8');
 
-    // Only patch the ShadowDomRenderer instantiation in DomRendererFactory2
-    src = src.replace(/(case ViewEncapsulation\.ShadowDom:\s*\n\s*)return new ShadowDomRenderer\(([^)]*)\);/g, (match, p1, args) => {
-        const newArgs = args
-            .split(',')
-            .filter(arg => !/sharedStylesHost/.test(arg))
-            .join(',');
-        return `${p1}return new ShadowDomRenderer(${newArgs});`;
-    });
-
     // Patch the ShadowDomRenderer class
-    src = src.replace(/(class ShadowDomRenderer extends DefaultDomRenderer2\s*\{)/, '$1\n    hostEl; shadowRoot;');
-
-    // Patch the constructor
-    src = src.replace(/(constructor\()([^)]*)(\))/, (match, p1, args, p3) => {
-        const newArgs = args.split(',').filter(arg => !/sharedStylesHost/.test(arg)).join(',');
-        return `${p1}${newArgs}${p3}`;
-    });
+    src = src.replace(/(class ShadowDomRenderer extends DefaultDomRenderer2\s*\{)/, '$1');
 
     src = src.replace(/(class ShadowDomRenderer extends DefaultDomRenderer2\s*\{[\s\S]*?\n\})/m, (match) => {
         return match
