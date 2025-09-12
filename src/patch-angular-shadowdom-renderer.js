@@ -37,49 +37,11 @@ files.forEach(file => {
     return `${p1}return new ShadowDomRenderer(${newArgs});`;
   });
 
-  const newShadowDomRendererClass = `
-class ShadowDomRenderer extends DefaultDomRenderer2 {
-   hostEl;
-    shadowRoot;
-    constructor(eventManager, hostEl, component, doc, ngZone, nonce, platformIsServer, tracingService, registry, maxAnimationTimeout) {
-        super(eventManager, doc, ngZone, platformIsServer, tracingService, registry, maxAnimationTimeout);
-        this.hostEl = hostEl;
-        this.shadowRoot = hostEl.attachShadow({ mode: 'open' });
-        let styles = component.styles;
-        if (ngDevMode) {
-            // We only do this in development, as for production users should not add CSS sourcemaps to components.
-            const baseHref = _getDOM().getBaseHref(doc) ?? '';
-            styles = addBaseHrefToCssSourceMap(baseHref, styles);
-        }
-        styles = shimStylesContent(component.id, styles);
-        for (const style of styles) {
-            const styleEl = document.createElement('style');
-            if (nonce) {
-                styleEl.setAttribute('nonce', nonce);
-            }
-            styleEl.textContent = style;
-            this.shadowRoot.appendChild(styleEl);
-        }
-    }
-    nodeOrShadowRoot(node) {
-        return node === this.hostEl ? this.shadowRoot : node;
-    }
-    appendChild(parent, newChild) {
-        return super.appendChild(this.nodeOrShadowRoot(parent), newChild);
-    }
-    insertBefore(parent, newChild, refChild) {
-        return super.insertBefore(this.nodeOrShadowRoot(parent), newChild, refChild);
-    }
-    removeChild(_parent, oldChild) {
-        return super.removeChild(null, oldChild);
-    }
-    parentNode(node) {
-        return this.nodeOrShadowRoot(super.parentNode(this.nodeOrShadowRoot(node)));
-    }
-}
-`;
-
-  src = src.replace(/class ShadowDomRenderer extends DefaultDomRenderer2\s*\{[\s\S]*?\n\}/m, newShadowDomRendererClass);
+  src = src.replace(/(class ShadowDomRenderer extends DefaultDomRenderer2\s*\{[\s\S]*?\n\})/m, (match) => {
+    return match
+      .replace(/this\.sharedStylesHost\.addHost\(this\.shadowRoot\);/g, '// this.sharedStylesHost.addHost(this.shadowRoot);')
+      .replace(/this\.sharedStylesHost\.removeHost\(this\.shadowRoot\);/g, '// this.sharedStylesHost.removeHost(this.shadowRoot);');
+  });
 
   fs.writeFileSync(file, src, 'utf8');
   console.log(`Patched: ${file}`);
